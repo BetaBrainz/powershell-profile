@@ -125,7 +125,7 @@ function ff($name) {
 }
 
 # Network Utilities
-function Get-PubIP { (Invoke-WebRequest http://ifconfig.me/ip).Content }
+function GetPublicIP { (Invoke-WebRequest http://ifconfig.me/ip).Content }
 
 # System Utilities
 function uptime {
@@ -136,7 +136,7 @@ function uptime {
     }
 }
 
-function reload-profile {
+function ReloadProfile {
     & $profile
 }
 
@@ -238,9 +238,6 @@ function dtop { Set-Location -Path $HOME\Desktop }
 # Quick Access to Editing the Profile
 function ep { vim $PROFILE }
 
-# Simplified Process Management
-function k9 { Stop-Process -Name $args[0] }
-
 # Enhanced Listing
 function la { Get-ChildItem -Path . -Force | Format-Table -AutoSize }
 function ll { Get-ChildItem -Path . -Force -Hidden | Format-Table -AutoSize }
@@ -312,14 +309,11 @@ function NetworkSpeed {
 
 function wifinetwork{netsh wlan show profile}
 
-function wifinetworkfun{netsh wlan show profile $args key=clear | findstr “Key Content”}
-set-alias thiswifi wifinetworkfun
+function thiswifi{netsh wlan show profile $args key=clear | findstr “Key Content”}
 
-function weatherfun{curl wttr.in/$args}
-set-alias weather weatherfun
+function weather{curl wttr.in/$args}
 
-function qrfun{curl qrenco.de/$args}
-set-alias qr qrfun
+function qr{curl qrenco.de/$args}
 
 function googleSearch{start www.google.com/search?q=$args}
 set-alias gs googleSearch
@@ -462,7 +456,7 @@ function ShowFunctions {
     Write-Output "  - IPchange: Tries to change IP allocated to system. Usage: ipchange"
 	Write-Output "  - NetworkSpeed: Test Network Speed. Usage: NetworkSpeed"
 	Write-Output "  - wifinetwork: Get Wifi profiles. Usage: wifinetwork"
-	Write-Output "  - wifinetworkfun: Get Wifi Content. Usage: wifinetworkfun"
+	Write-Output "  - thiswifi: Get Wifi Content. Usage: thiswifi"
 
     # File Management
     Write-Host "`nFile Management:" -ForegroundColor Green
@@ -514,10 +508,10 @@ function ShowFunctions {
 	
 	# Quality of Life Utilities
     Write-Host "`nQuality of Life Utilities:" -ForegroundColor Green
-	Write-Output "  - weatherfun: Get Weather information. Usage: weatherfun Location"
-	Write-Output "  - qrfun: Create QR codes. Usage: qrfun url"
-	Write-Output "  - googleSearch: Search google for queries. Usage: googleSearch query"
-	Write-Output "  - youtubeSearch: Search Youtube for queries. Usage: youtubeSearch query"
+	Write-Output "  - weather: Get Weather information. Usage: weather Location"
+	Write-Output "  - qr: Create QR codes. Usage: qrfun url"
+	Write-Output "  - googleSearch: Search google for queries. Usage: gs query"
+	Write-Output "  - youtubeSearch: Search Youtube for queries. Usage: ys query"
 	Write-Output "  - scanfile: Runs SFC scan. Usage: scanfile"
 	Write-Output "  - checkhealth: Runs DISM health check. Usage: checkhealth"
 	Write-Output "  - scanhealth: Runs DISM health scan. Usage: scanhealth"
@@ -525,7 +519,6 @@ function ShowFunctions {
 	Write-Output "  - ipflush: flushes IP. Usage: ipflush"
 	Write-Output "  - shutdown: Shutdown the system. Usage: shutdown"
 	Write-Output "  - restart: Restarts the system. Usage: restart"
-	Write-Output "  - Get-HWVersion: Get Hardware infomation. Usage: Get-HWVersion"
 	Write-Output "  - Edit-Profile: Edits the profile. Usage: Edit-Profile"
 	Write-Output "  - cleaner: Cleans temp files. Usage: cleaner"
 	Write-Output "  - ipchange: Tries to change IP. Usage: ipchange"
