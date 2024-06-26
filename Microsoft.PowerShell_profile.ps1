@@ -50,11 +50,6 @@ function Update-FastFetch {
 
 Update-FastFetch
 
-# Display Fastfetch
-cls
-fastfetch
-
-
 # Check for Profile Updates
 function UpdateProfile {
     param (
@@ -172,7 +167,7 @@ function Get-Theme {
             return
         }
     } else {
-        oh-my-posh init pwsh --config https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/plague.omp.json | Invoke-Expression
+        oh-my-posh init pwsh --config https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/di4am0nd.omp.json | Invoke-Expression
     }
 }
 
@@ -356,7 +351,7 @@ function SystemResourceUsage {
 
 function NetworkSpeed {
     try {
-        $output = speedtest-cli --simple
+        $output = speedtest-cli --simple --secure
         $lines = $output -split "\n"
 
         foreach ($line in $lines) {
@@ -503,7 +498,7 @@ Set-PSReadLineOption -Colors @{
 }
 
 ## Final Line to set prompt
-oh-my-posh init pwsh --config https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/plague.omp.json | Invoke-Expression
+oh-my-posh init pwsh --config https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/di4am0nd.omp.json | Invoke-Expression
 Get-Theme
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
 Invoke-Expression (& { (zoxide init --cmd cd powershell | Out-String) })
