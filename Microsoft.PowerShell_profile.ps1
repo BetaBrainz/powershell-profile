@@ -15,6 +15,46 @@ if (Test-Path($ChocolateyProfile)) {
     Import-Module "$ChocolateyProfile"
 }
 
+# Check for Fastfetch Updates
+function Update-FastFetch {
+    if (-not $global:canConnectToGitHub) {
+        return
+    }
+
+    try {
+        $updateNeeded = $false
+        $currentVersion = Get-Command fastfetch | Select-Object -ExpandProperty Version
+        $gitHubApiUrl = "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest"
+
+        if ($env:pwsh_github_api) {
+            $headers = @{
+                "Authorization" = "token $env:pwsh_github_api"
+            }
+            $latestReleaseInfo = Invoke-RestMethod -Uri $gitHubApiUrl -Headers $headers
+        } else {
+            $latestReleaseInfo = Invoke-RestMethod -Uri $gitHubApiUrl
+        }
+
+        $latestVersion = $latestReleaseInfo.tag_name.Trim('v')
+        if ($currentVersion -lt $latestVersion) {
+            $updateNeeded = $true
+        }
+
+        if ($updateNeeded) {
+            winget upgrade fastfetch
+        }
+    } catch {
+        Write-Error "Failed to update FastFetch. Error: $_"
+    }
+}
+
+Update-FastFetch
+
+# Display Fastfetch
+cls
+fastfetch
+
+
 # Check for Profile Updates
 function UpdateProfile {
     param (
@@ -120,14 +160,40 @@ function Edit-Profile {
 function touch($file) { "" | Out-File $file -Encoding ASCII }
 function ff($name) {
     Get-ChildItem -recurse -filter "*${name}*" -ErrorAction SilentlyContinue | ForEach-Object {
-        Write-Output "$($_.directory)\$($_)"
+        Write-Output "$($_.FullName)"
+    }
+}
+
+function Get-Theme {
+    if (Test-Path -Path $PROFILE.CurrentUserAllHosts -PathType leaf) {
+        $existingTheme = Select-String -Raw -Path $PROFILE.CurrentUserAllHosts -Pattern "oh-my-posh init pwsh --config"
+        if ($null -ne $existingTheme) {
+            Invoke-Expression $existingTheme
+            return
+        }
+    } else {
+        oh-my-posh init pwsh --config https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/plague.omp.json | Invoke-Expression
     }
 }
 
 # Network Utilities
 function GetPublicIP { (Invoke-WebRequest http://ifconfig.me/ip).Content }
+function GetPublicIPinfo { (GetPublicIP) | ForEach-Object { curl "http://api.db-ip.com/v2/free/$_" } }
+Set-Alias -Name IP -Value GetPublicIPinfo
 
 # System Utilities
+
+function winact { powershell "irm massgrave.dev/get | iex" }
+
+function admin {
+    if ($args.Count -gt 0) {
+        $argList = "& '$args'"
+        Start-Process wt -Verb runAs -ArgumentList "pwsh.exe -NoExit -Command $argList"
+    } else {
+        Start-Process wt -Verb runAs
+    }
+}
+
 function uptime {
     if ($PSVersionTable.PSVersion.Major -eq 5) {
         Get-WmiObject win32_operatingsystem | Select-Object @{Name='LastBootUpTime'; Expression={$_.ConverttoDateTime($_.lastbootuptime)}} | Format-Table -HideTableHeaders
@@ -218,8 +284,8 @@ function head {
 }
 
 function tail {
-  param($Path, $n = 10)
-  Get-Content $Path -Tail $n
+  param($Path, $n = 10, [switch]$f = $false)
+  Get-Content $Path -Tail $n -Wait:$f
 }
 
 # Quick File Creation
@@ -265,11 +331,16 @@ function lazyg {
 
 function ss {git status --short}
 
+function gcl { git clone "$args" }
+
 # Quick Access to System Information
 function sysinfo { Get-ComputerInfo }
 
 # Networking Utilities
-function flushdns { Clear-DnsClientCache }
+function flushdns { 
+	Clear-DnsClientCache
+	Write-Host "DNS has been flushed"
+}
 
 # Clipboard Utilities
 function cpy { Set-Clipboard $args[0] }
@@ -412,6 +483,18 @@ try {
 }
 }
 
+# color test command
+function Show-Colors( ) {
+    $colors = [Enum]::GetValues( [ConsoleColor] )
+    $max = ($colors | foreach { "$_ ".Length } | Measure-Object -Maximum).Maximum
+    foreach( $color in $colors ) {
+      Write-Host (" {0,2} {1,$max} " -f [int]$color,$color) -NoNewline
+      Write-Host "$color" -Foreground $color
+    }
+}
+
+
+
 # Enhanced PowerShell Experience
 Set-PSReadLineOption -Colors @{
     Command = 'Yellow'
@@ -420,16 +503,28 @@ Set-PSReadLineOption -Colors @{
 }
 
 ## Final Line to set prompt
-oh-my-posh init pwsh --config https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/di4am0nd.omp.json | Invoke-Expression
+oh-my-posh init pwsh --config https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/plague.omp.json | Invoke-Expression
+Get-Theme
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
-    Invoke-Expression (& { (zoxide init powershell | Out-String) })
-} else {
-    Write-Host "zoxide command not found. Attempting to install via winget..."
-    try {
+Invoke-Expression (& { (zoxide init --cmd cd powershell | Out-String) })
+}
+else {
+ 
+
+    ## Runs fastfetch    Write-Host "zoxide command not found. Attempting to install via winget..."
+    # Check if fastfetch command exists
+    if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
+        # Run fastfetch
+        fastfetch
+    }
+    else {
+        Write-Host "fastfetch command not found. Please install fastfetch."
+    }    try {
         winget install -e --id ajeetdsouza.zoxide
         Write-Host "zoxide installed successfully. Initializing..."
         Invoke-Expression (& { (zoxide init powershell | Out-String) })
-    } catch {
+    }
+    catch {
         Write-Error "Failed to install zoxide. Error: $_"
     }
 }
@@ -443,15 +538,19 @@ function ShowFunctions {
     Write-Output "  - EditProfile: Opens the current user's all hosts profile in the default editor. Usage: EditProfile"
     Write-Output "  - ReloadProfile: Reloads the PowerShell profile. Usage: ReloadProfile"
     Write-Output "  - UpdatePowerShell: Checks and updates PowerShell if a newer version is available. Usage: UpdatePowerShell"
+	Write-Output "  - Get-theme: Gets PowerShell theme. Usage: Get-theme"
 
     # System Utilities
     Write-Host "`nSystem Utilities:" -ForegroundColor Green
     Write-Output "  - Uptime: Shows system uptime since the last boot. Usage: Uptime"
     Write-Output "  - Sysinfo: Retrieves detailed system information. Usage: Sysinfo"
+	Write-Output "  - admin: Run Program as admin. Usage: admin program"
+	Write-Output "  - winact: Activate windows and office. Usage: winact"
 
     # Network Utilities
     Write-Host "`nNetwork Utilities:" -ForegroundColor Green
     Write-Output "  - GetPublicIP: Retrieves the public IP address. Usage: GetPublicIP"
+	Write-Output "  - GetPublicIPInfo: Retrieves the public IP address information. Usage: GetPublicIPinfo"
     Write-Output "  - FlushDNS: Clears the DNS client cache. Usage: FlushDNS"
     Write-Output "  - IPchange: Tries to change IP allocated to system. Usage: ipchange"
 	Write-Output "  - NetworkSpeed: Test Network Speed. Usage: NetworkSpeed"
@@ -488,6 +587,7 @@ function ShowFunctions {
     Write-Output "  - g: Navigates to the GitHub directory. Usage: g"
     Write-Output "  - gcom: Stages and commits all changes in git with a specified message. Usage: gcom 'message'"
     Write-Output "  - lazyg: Stages, commits, and pushes all changes in git. Usage: lazyg 'message'"
+	Write-Output "  - gcl: Perform Git clone. Usage: gcl 'link'"
 
     # Clipboard Utilities
     Write-Host "`nClipboard Utilities:" -ForegroundColor Green
@@ -519,7 +619,6 @@ function ShowFunctions {
 	Write-Output "  - ipflush: flushes IP. Usage: ipflush"
 	Write-Output "  - shutdown: Shutdown the system. Usage: shutdown"
 	Write-Output "  - restart: Restarts the system. Usage: restart"
-	Write-Output "  - Edit-Profile: Edits the profile. Usage: Edit-Profile"
 	Write-Output "  - cleaner: Cleans temp files. Usage: cleaner"
 	Write-Output "  - ipchange: Tries to change IP. Usage: ipchange"
 
