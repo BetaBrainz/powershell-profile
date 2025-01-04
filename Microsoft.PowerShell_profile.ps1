@@ -176,6 +176,44 @@ function GetPublicIP { (Invoke-WebRequest http://ifconfig.me/ip).Content }
 function GetPublicIPinfo { (GetPublicIP) | ForEach-Object { curl "http://api.db-ip.com/v2/free/$_" } }
 Set-Alias -Name IP -Value GetPublicIPinfo
 
+function GetPrivateIP {
+    try {
+        # Get private IPs for Wi-Fi and Ethernet
+        $privateIPs = Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+            ($_.InterfaceAlias -match "Wi-Fi|Ethernet") -and
+            ($_.IPAddress -notmatch "^169\.254\." -and $_.IPAddress -ne "127.0.0.1")
+        } | Select-Object -ExpandProperty IPAddress
+
+        if ($privateIPs) {
+            $privateIPs -join ", "
+        } else {
+            Write-Warning "No private IP addresses found for Wi-Fi or Ethernet."
+        }
+    } catch {
+        Write-Error "Failed to retrieve private IP address: $_"
+    }
+}
+
+function Monitor-Connectivity {
+    param (
+        [string]$Host = "8.8.8.8" # Google Public DNS
+    )
+    try {
+        Write-Output "Monitoring connectivity to $Host..."
+        while ($true) {
+            $status = Test-Connection -ComputerName $Host -Count 1 -Quiet
+            if ($status) {
+                Write-Host "Online" -ForegroundColor Green
+            } else {
+                Write-Host "Offline" -ForegroundColor Red
+            }
+            Start-Sleep -Seconds 5
+        }
+    } catch {
+        Write-Error "Failed to monitor connectivity: $_"
+    }
+}
+
 # System Utilities
 
 function winact { powershell "irm massgrave.dev/get | iex" }
@@ -546,6 +584,8 @@ function ShowFunctions {
     Write-Host "`nNetwork Utilities:" -ForegroundColor Green
     Write-Output "  - GetPublicIP: Retrieves the public IP address. Usage: GetPublicIP"
 	Write-Output "  - GetPublicIPInfo: Retrieves the public IP address information. Usage: GetPublicIPinfo"
+	Write-Output "  - GetPrivateIP: Retrieves the private IP address information. Usage: GetPrivateIP"
+	Write-Output "  - Monitor-Connectivity: Pings a reliable host to monitor connectivity in real-time. Usage: Monitor-Connectivity"
     Write-Output "  - FlushDNS: Clears the DNS client cache. Usage: FlushDNS"
     Write-Output "  - IPchange: Tries to change IP allocated to system. Usage: ipchange"
 	Write-Output "  - NetworkSpeed: Test Network Speed. Usage: NetworkSpeed"
