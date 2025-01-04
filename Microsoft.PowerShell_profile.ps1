@@ -196,12 +196,12 @@ function GetPrivateIP {
 
 function Monitor-Connectivity {
     param (
-        [string]$Host = "8.8.8.8" # Google Public DNS
+        [string]$TargetHost = "8.8.8.8" # Google Public DNS
     )
     try {
-        Write-Output "Monitoring connectivity to $Host..."
+        Write-Output "Monitoring connectivity to $TargetHost..."
         while ($true) {
-            $status = Test-Connection -ComputerName $Host -Count 1 -Quiet
+            $status = Test-Connection -ComputerName $TargetHost -Count 1 -Quiet
             if ($status) {
                 Write-Host "Online" -ForegroundColor Green
             } else {
